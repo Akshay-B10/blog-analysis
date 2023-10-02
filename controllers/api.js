@@ -1,3 +1,5 @@
+const _ = require("lodash");
+
 exports.blogStats = async (req, res) => {
     try {
         const options = {
@@ -12,8 +14,14 @@ exports.blogStats = async (req, res) => {
         }
         const blogData = await response.json();
         const blogs = blogData.blogs; // Array of objects
+        const blogWithLongestTitle = _.maxBy(blogs, blog => blog.title.length);
+        const blogsWithPrivacyInTitle = _.filter(blogs, blog => _.includes(_.toLower(blog.title), "privacy"));
+        const blogsWithUniqueTitle = _.uniqBy(blogs, "title");
         res.json({
-            total_blogs: blogs.length
+            total_blogs: blogs.length || 0,
+            longest_title: blogWithLongestTitle.title,
+            blogs_with_privacy_in_title: blogsWithPrivacyInTitle.length,
+            blogs_with_unique_title: blogsWithUniqueTitle
         });
     } catch (err) {
         res.status(err.status).json({
