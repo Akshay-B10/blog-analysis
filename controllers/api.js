@@ -1,5 +1,9 @@
 const _ = require("lodash");
 
+const getCachedBlogs = _.memoize(getBlogs, null, 60000); // 60000 ms = 1 min
+
+const getCachedFilteredBlogs = _.memoize(filterBlogs, (blogs, query) => query, 60000);
+
 async function getBlogs() {
     try {
         const options = {
@@ -22,11 +26,16 @@ async function getBlogs() {
     }
 }
 
+function filterBlogs(blogs, query) {
+    const filteredBlogs = _.filter(blogs, blog => _.includes(_.toLower(blog.title), query));
+    return filteredBlogs;
+};
+
 exports.blogStats = async (req, res) => {
     try {
-        const blogs = await getBlogs(); // Array of objects
+        const blogs = await getCachedBlogs(); // Array of objects
         const blogWithLongestTitle = _.maxBy(blogs, blog => blog.title.length);
-        const blogsWithPrivacyInTitle = _.filter(blogs, blog => _.includes(_.toLower(blog.title), "privacy"));
+        const blogsWithPrivacyInTitle = getCachedFilteredBlogs(blogs, "privacy");
         const blogsWithUniqueTitle = _.uniqBy(blogs, "title");
         res.json({
             total_blogs: blogs.length || 0,
@@ -50,7 +59,7 @@ exports.blogSearch = async (req, res) => {
     try {
         const blogs = await getBlogs();
         const filterQuery = req.query.query;
-        const filteredBlogs = _.filter(blogs, blog => _.includes(_.toLower(blog.title), filterQuery));
+        const filteredBlogs = getCachedFilteredBlogs(blogs, filterQuery);
         res.json({
             query_result: filteredBlogs
         });
